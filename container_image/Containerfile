@@ -1,0 +1,59 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS builder
+
+ARG TKN_VERSION=0.43.0
+ARG RUNNER_VERSION=2.329.0
+
+ENV TKN_URL="https://github.com/tektoncd/cli/releases/download/v${TKN_VERSION}/tkn_${TKN_VERSION}_Linux_x86_64.tar.gz" \
+    RUNNER_URL="https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
+
+RUN microdnf -y install tar gzip
+
+WORKDIR /tmp/
+
+RUN curl -L "$TKN_URL" -o /tmp/tkn.tar.gz && \
+    curl -L "$RUNNER_URL" -o /tmp/runner.tar.gz && \
+    mkdir tkn runner && \
+    tar -xzf tkn.tar.gz --directory tkn && \
+    tar -xzf runner.tar.gz --directory runner && ls -l tkn runner
+
+
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+#FROM registry.access.redhat.com/ubi9/ubi:latest
+#FROM registry.access.redhat.com/ubi8/dotnet-80-runtime:latest
+
+USER root
+
+## Dependencies required for github actions runner
+RUN microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu openssl jq
+
+# Copy artifacts from builder
+COPY --from=builder --chmod=0755 /tmp/tkn/tkn /usr/local/bin
+COPY --from=builder /tmp/runner/ /opt/gh-actions-runner/
+
+COPY --chmod=755 entrypoint.sh get_github_app_token.sh register.sh /entrypoint/
+
+# Working directory for github actions runner. Defined in entrypoint.sh
+WORKDIR /opt/gh-actions-runner/_work
+
+RUN chmod -Rf 775 /opt/gh-actions-runner/ && \
+    chown -Rf :root /opt/gh-actions-runner/
+
+## Do not put sensitive details here, pass them in via environment variables instead
+# If using PAT (personal access token)
+ENV GITHUB_PAT="" \
+# If using GitHub App
+    GITHUB_APP_ID="" \
+    GITHUB_APP_INSTALL_ID="" \
+    GITHUB_APP_PEM="" \
+# GitHub Actions Runner token (not required if using PAT or GitHub App)
+    RUNNER_TOKEN="" \
+# GITHUB_DOMAIN - leave blank if "github.com"
+    GITHUB_DOMAIN="" \
+    GITHUB_OWNER="MooseStack" \
+    GITHUB_REPOSITORY="github-actions-runner" \
+# Runner workload directory
+    RUNNER_WORKDIR="/opt/gh-actions-runner/_work" \
+    RUNNER_LABEL="ubi9-gh-runner,openshift"
+
+
+CMD ["/entrypoint/entrypoint.sh"]
