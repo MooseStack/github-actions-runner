@@ -6,13 +6,13 @@ CREDS_FILE="${PWD}/.credentials"
 
 # Assume registration artifacts have been persisted from a previous start
 # if no PAT or TOKEN is provided, and simply attempt to start.
-if [ -n "${GITHUB_PAT:-}" ] || [ -n "${RUNNER_TOKEN:-}" ] || [ -n "${GITHUB_APP_ID:-}" ]; then
+if [ -n "${GITHUB_PAT:-}" ] || [ -n "${GITHUB_RUNNER_TOKEN:-}" ] || [ -n "${GITHUB_APP_ID:-}" ]; then
     source /entrypoint/register.sh
 elif [ -e "${CREDS_FILE}" ]; then
-    echo "No GITHUB_PAT or RUNNER_TOKEN provided. Using existing credentials file ${CREDS_FILE}."
+    echo "No GITHUB_PAT or GITHUB_RUNNER_TOKEN provided. Using existing credentials file ${CREDS_FILE}."
 else
     echo "No saved credentials found in ${CREDS_FILE}."
-    echo "Fatal: GITHUB_PAT or RUNNER_TOKEN must be set in the environment."
+    echo "Fatal: GITHUB_PAT or GITHUB_RUNNER_TOKEN must be set in the environment."
     exit 1
 fi
 
@@ -28,7 +28,7 @@ else
 fi
 
 set -x
-/opt/gh-actions-runner/run.sh --once &
+/opt/gh-actions-runner/run.sh &
 svc_pid=$!
 
 wait $svc_pid

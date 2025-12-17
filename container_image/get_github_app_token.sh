@@ -1,6 +1,4 @@
 #!/bin/sh
-# Adapted from https://stackoverflow.com/a/62646786 and
-# Github's docs: https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#authenticating-as-a-github-app
 
 get_github_app_token() {
         NOW=$( date +%s )

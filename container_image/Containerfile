@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest AS builder
 
 ARG TKN_VERSION=0.43.0
-ARG RUNNER_VERSION=2.329.0
+ARG RUNNER_VERSION=2.330.0
 
 ENV TKN_URL="https://github.com/tektoncd/cli/releases/download/v${TKN_VERSION}/tkn_${TKN_VERSION}_Linux_x86_64.tar.gz" \
     RUNNER_URL="https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
@@ -46,14 +46,15 @@ ENV GITHUB_PAT="" \
     GITHUB_APP_INSTALL_ID="" \
     GITHUB_APP_PEM="" \
 # GitHub Actions Runner token (not required if using PAT or GitHub App)
-    RUNNER_TOKEN="" \
+    GITHUB_RUNNER_TOKEN="" \
 # GITHUB_DOMAIN - leave blank if "github.com"
     GITHUB_DOMAIN="" \
     GITHUB_OWNER="MooseStack" \
     GITHUB_REPOSITORY="github-actions-runner" \
 # Runner workload directory
-    RUNNER_WORKDIR="/opt/gh-actions-runner/_work" \
-    RUNNER_LABEL="ubi9-gh-runner,openshift"
+    GITHUB_RUNNER_WORKDIR="/opt/gh-actions-runner/_work" \
+    GITHUB_RUNNER_LABEL="ubi9-gh-runner,openshift" \
+    GITHUB_RUNNER_EPHEMERAL="true"
 
 
 CMD ["/entrypoint/entrypoint.sh"]

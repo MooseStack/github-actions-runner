@@ -1,0 +1,35 @@
+replicaCount: 1
+
+image:
+  repository: "docker.io/moosestack/github-actions-runner"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+resources: {}
+
+
+ # Secrets to populate the Kubernetes Secret. Set via helm `--set`, this values file. or argocd/flux, etc.
+secrets:
+  # Optional - if using personal access token authentication:
+  GITHUB_PAT: "test123" # Personal Access Token
+  # Optional - if using GitHub App authentication:
+  GITHUB_APP_ID: ""
+  GITHUB_APP_INSTALL_ID: ""
+  GITHUB_APP_PEM: ""
+  # Optional - if using registration token authentication (PAT or APP preferred to manage runner lifecycle):
+  GITHUB_RUNNER_TOKEN: ""
+  # GitHub repository/org details:
+  GITHUB_DOMAIN: "" # Leave empty for github.com. Only set for enterprise github
+  GITHUB_OWNER: "MooseStack"
+  GITHUB_REPOSITORY: "github-actions-runner"
+  # Runner configuration:
+  GITHUB_RUNNER_WORKDIR: "/opt/gh-actions-runner/_work"
+  GITHUB_RUNNER_LABEL: "ubi9-gh-runner,openshift"
+  GITHUB_RUNNER_EPHEMERAL: "true"

@@ -1,5 +1,4 @@
 #!/bin/sh
-# Based on https://github.com/bbrowning/github-runner/blob/master/entrypoint.sh
 
 set -eE
 
@@ -35,7 +34,7 @@ if [ -z "${GITHUB_PAT:-}" ] && [ -z "${GITHUB_APP_ID:-}" ]; then
     echo "Visit ${registration_url}/settings/actions/runners to manually force removal of runner."
 fi
 
-if [ -z "${RUNNER_TOKEN:-}" ]; then
+if [ -z "${GITHUB_RUNNER_TOKEN:-}" ]; then
     if [ -z "${GITHUB_REPOSITORY:-}" ]; then
         echo "Runner is scoped to organization '${GITHUB_OWNER}'"
         echo "View runner status at https://${GITHUB_DOMAIN}/organizations/${GITHUB_OWNER}/settings/actions"
@@ -58,22 +57,28 @@ if [ -z "${RUNNER_TOKEN:-}" ]; then
         payload=$(curl -sSfLX POST -H "Authorization: token ${GITHUB_PAT}" ${token_url})
     fi
 
-    export RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)
+    export GITHUB_RUNNER_TOKEN=$(echo $payload | jq .token --raw-output)
     echo "Obtained registration token"
 else
-    echo "Using RUNNER_TOKEN from environment"
+    echo "Using GITHUB_RUNNER_TOKEN from environment"
 fi
 
 
-if [ -n "${RUNNER_TOKEN:-}" ]; then
-    set -x
+ephemeral_arg=""
+# update arg if set as non-zero/not empty
+if [ -n "${GITHUB_RUNNER_EPHEMERAL:-}" ]; then
+    ephemeral_arg="--ephemeral"
+fi
+
+if [ -n "${GITHUB_RUNNER_TOKEN:-}" ]; then
+    set -e
     /opt/gh-actions-runner/config.sh \
         --name ubi9-$(date +%m-%d-%Y.%s) \
-        --token ${RUNNER_TOKEN} \
+        --token ${GITHUB_RUNNER_TOKEN} \
         --url ${registration_url} \
-        --work ${RUNNER_WORKDIR} \
-        --labels ${RUNNER_LABEL} \
-        --ephemeral \
+        --work ${GITHUB_RUNNER_WORKDIR} \
+        --labels ${GITHUB_RUNNER_LABEL} \
+        ${ephemeral_arg} \
         --unattended \
         --replace
     set +x
