@@ -25,7 +25,7 @@ USER root
 
 ## Dependencies required for github actions runner
 RUN microdnf update -y && \
-    microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu openssl jq && \
+    microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu tar gzip openssl jq && \
     microdnf clean all
 
 # Copy artifacts from builder
