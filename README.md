@@ -42,7 +42,7 @@ Other available options:
 # Runner workload directory
     --set secrets.GITHUB_RUNNER_WORKDIR="/opt/gh-actions-runner/_work"
     --set secrets.GITHUB_RUNNER_LABEL="ubi9-gh-runner,openshift"
-    --set secrets.GITHUB_RUNNER_EPHEMERAL="true"
+    --set secrets.GITHUB_RUNNER_EPHEMERAL="" # options are "true" or empty ""
 ```
 
 3. This chart creates:
