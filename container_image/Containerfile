@@ -24,7 +24,8 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 USER root
 
 ## Dependencies required for github actions runner
-RUN microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu openssl jq && \
+RUN microdnf update -y && \
+    microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu openssl jq && \
     microdnf clean all
 
 # Copy artifacts from builder
