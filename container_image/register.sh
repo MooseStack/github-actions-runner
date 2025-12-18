@@ -65,8 +65,7 @@ fi
 
 
 ephemeral_arg=""
-# update arg if set as non-zero/not empty
-if [ -n "${GITHUB_RUNNER_EPHEMERAL:-}" ]; then
+if [ "${GITHUB_RUNNER_EPHEMERAL:-}" = "True" ] || [ "${GITHUB_RUNNER_EPHEMERAL:-}" = "true" ]; then
     ephemeral_arg="--ephemeral"
 fi
 
