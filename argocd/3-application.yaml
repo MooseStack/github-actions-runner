@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-actions-runner
+  namespace: openshift-gitops
+spec:
+  project: gh-actions-runner
+  source:
+    repoURL: https://github.com/MooseStack/github-actions-runner.git
+    targetRevision: main
+    path: helm
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gh-actions-runner
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        app.kubernetes.io/managed-by: openshift-gitops
+        argocd.argoproj.io/managed-by: openshift-gitops
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: "*"
+      kind: "Application"
+      jsonPointers:
+        # Allow manually disabling auto sync for apps, useful for debugging.
+        - /spec/syncPolicy/automated
+        # These are automatically updated on a regular basis. Not ignoring last applied configuration since it's used for computing diffs after normalization.
+        - /metadata/annotations/argocd.argoproj.io~1refresh
+        - /operation
+    - group: ""
+      kind: Secret
+      name: github-actions-runner-secret
+      jsonPointers:
+          - /data
+          - /stringData

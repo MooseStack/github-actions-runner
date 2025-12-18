@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: gh-actions-runner
+  namespace: openshift-gitops
+spec:
+  description: "Argo CD project for GitHub Actions Runner"
+  # Allow this project to track manifests from any git repo. Narrow this if you
+  # want to restrict to a specific repo (e.g. https://github.com/your-org/yourrepo.git)
+  sourceRepos:
+    - 'https://github.com/MooseStack/github-actions-runner.git'
+  # Allow deployment to only a specific namespace in the in-cluster Kubernetes API server.
+  destinations:
+    - namespace: 'gh-actions-runner'
+      server: 'https://kubernetes.default.svc'
+  # Allow namespace-scoped resources if your apps need them. Remove or restrict
+  # this if you want to enforce least privilege.
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: 'Namespace'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

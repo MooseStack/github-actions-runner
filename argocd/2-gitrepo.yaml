@@ -1,0 +1,14 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: argo-gitrepo-gh-actions-runner
+  namespace: openshift-gitops
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    managed-by: argocd.argoproj.io
+data:
+  project: Z2gtYWN0aW9ucy1ydW5uZXI= #gh-actions-runner
+  type: Z2l0 #git
+  url: aHR0cHM6Ly9naXRodWIuY29tL01vb3NlU3RhY2svZ2l0aHViLWFjdGlvbnMtcnVubmVyLmdpdA== #https://github.com/MooseStack/github-actions-runner.git
+
