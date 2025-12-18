@@ -32,4 +32,4 @@ secrets:
   # Runner configuration:
   GITHUB_RUNNER_WORKDIR: "/opt/gh-actions-runner/_work"
   GITHUB_RUNNER_LABEL: "ubi9-gh-runner,openshift"
-  GITHUB_RUNNER_EPHEMERAL: "true"
+  GITHUB_RUNNER_EPHEMERAL: "" # Set to "true" to make the runner ephemeral. Leave empty "" otherwise. Ephermural can stop/restart pod after every run.
