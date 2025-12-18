@@ -16,7 +16,23 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | default "500m" }}
+              memory: {{ .Values.resources.requests.memory | default "700Mi" }}
+              ephemeral-storage: {{ .Values.resources.requests.ephemeralstorage | default "2Gi" }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | default "800m" }}
+              memory: {{ .Values.resources.limits.memory | default "1Gi" }}
+              ephemeral-storage: {{ .Values.resources.limits.ephemeralstorage | default "10Gi" }}
+
           envFrom:
             # Attach all key-value pairs from the Secret as environment variables
             - secretRef:
                 name: {{ .Chart.Name }}-secret
+
+      {{- if .Values.image.imagePullSecretName }}
+      imagePullSecrets:
+        - name: {{ .Values.image.imagePullSecretName }}
+      {{- end }}

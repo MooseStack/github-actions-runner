@@ -5,6 +5,7 @@
 2. `podman tag runner:latest docker.io/moosestack/github-actions-runner:latest`
 3. `podman push docker.io/moosestack/github-actions-runner:latest`
 
+Image storaged in [Dockerhub](https://hub.docker.com/r/moosestack/github-actions-runner/tags)
 
 
 ## Deploy with Helm

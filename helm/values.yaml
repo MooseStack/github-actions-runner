@@ -3,17 +3,17 @@ replicaCount: 1
 image:
   repository: "docker.io/moosestack/github-actions-runner"
   tag: "latest"
-  pullPolicy: IfNotPresent
+  imagePullSecretName: "" # Optional - set if pulling from a private registry
 
-serviceAccount:
-  create: true
-  name: ""
-
-rbac:
-  create: true
-
-resources: {}
-
+resources:
+  requests: #min
+    cpu: 500m
+    memory: 700Mi
+    ephemeralstorage: "2Gi"
+  limits: #max
+    cpu: 800m
+    memory: 1Gi
+    ephemeralstorage: "10Gi"
 
  # Secrets to populate the Kubernetes Secret. Set via helm `--set`, this values file. or argocd/flux, etc.
 secrets:

@@ -24,7 +24,8 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 USER root
 
 ## Dependencies required for github actions runner
-RUN microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu openssl jq
+RUN microdnf install -y lttng-ust openssl-libs krb5-libs zlib libicu openssl jq && \
+    microdnf clean all
 
 # Copy artifacts from builder
 COPY --from=builder --chmod=0755 /tmp/tkn/tkn /usr/local/bin
@@ -56,5 +57,8 @@ ENV GITHUB_PAT="" \
     GITHUB_RUNNER_LABEL="ubi9-gh-runner,openshift" \
     GITHUB_RUNNER_EPHEMERAL="true"
 
+
+# Rabdom user to run since GH Runner does not support running as root
+USER 20001
 
 CMD ["/entrypoint/entrypoint.sh"]
