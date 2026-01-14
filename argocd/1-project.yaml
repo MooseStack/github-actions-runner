@@ -11,7 +11,7 @@ spec:
     - 'https://github.com/MooseStack/github-actions-runner.git'
   # Allow deployment to only a specific namespace in the in-cluster Kubernetes API server.
   destinations:
-    - namespace: 'gh-actions-runner'
+    - namespace: 'gh-actions-runner' #Update namespace if needed, also update in argocd/3-application.yaml destination section
       server: 'https://kubernetes.default.svc'
   # Allow namespace-scoped resources if your apps need them. Remove or restrict
   # this if you want to enforce least privilege.

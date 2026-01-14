@@ -8,7 +8,22 @@ Image uploaded to [Dockerhub](https://hub.docker.com/r/moosestack/github-actions
 
 # Deploy:
 
-## 1 - Deploy with [helm](https://helm.sh/docs/intro/install/) cli
+## Prerequisite - Create GitHub Credentials
+
+You can use a [Personal Access Token(PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token), [GitHub App](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps), or a Runner Token(ephemural).
+
+### [Personal Access Token(PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)
+
+If going with a Fine-grained PAT, permissions needed:
+1. `Actions: Read and write`
+2. `Contents: Read-only`
+3. `Metdadata: Read-only`
+4. `Workflows: Read and write`
+5. `Administration: Read and write` for individual repositories, OR `organization_self_hosted_runners: Read and write` if organization/owner wide runner.
+   - This last one is used to generate ephemural Runner Tokens and adds/deletes/updates the Runner in GitHub.
+
+
+## Option #1 - Deploy with [helm](https://helm.sh/docs/intro/install/) cli
 1. Edit [helm/values.yaml](helm/values.yaml) with your requirements
 
 2. To install the chart:
@@ -50,8 +65,13 @@ Other available options:
     2. Secret - Runner configurations that get used as Environment variables to Deployment pods
     3. ServiceAccount and Role/RoleBinding scoped to the release namespace which grant access to Tekton resources (pipelineruns, taskruns, pipelines, tasks) and related core resources (pods, secrets, serviceaccounts, configmaps).
 
-## 2 - Deploy with ArgoCD
 
-1. Modify the namespace, project name, etc in: [argocd](argocd)
+
+## Option #2 - Deploy with ArgoCD
+
+1. Modify the namespace, project name, etc(view comments) in: [argocd](argocd) folder
 2. `Kubectl apply -f ./argocd` or `oc apply -f ./argocd`
-3. Manually update the values of the secret `github-actions-runner-secret` in openshift/kubernetes. Then do a Deployment restart. 
+3. Manually update the values of the Secret `github-actions-runner-secret` in openshift/kubernetes.
+   - Update credentials, by using one of: PAT, GitHub App, or Runner token(not recommended since the other can make it)
+   - Update: GITHUB_DOMAIN, GITHUB_OWNER, and GITHUB_REPOSITORY with your repo info.
+4. Perform a Deployment restart, to pick up the modified Secret values.

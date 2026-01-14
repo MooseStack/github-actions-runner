@@ -4,7 +4,7 @@ metadata:
   name: github-actions-runner
   namespace: openshift-gitops
 spec:
-  project: gh-actions-runner
+  project: gh-actions-runner # Ensure this matches the name of the AppProject created earlier
   source:
     repoURL: https://github.com/MooseStack/github-actions-runner.git
     targetRevision: main
@@ -14,17 +14,17 @@ spec:
         - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: gh-actions-runner
+    namespace: gh-actions-runner #Update namespace if needed, also update in argocd/1-project.yaml destinations section
   syncPolicy:
-    managedNamespaceMetadata:
-      labels:
-        app.kubernetes.io/managed-by: openshift-gitops
-        argocd.argoproj.io/managed-by: openshift-gitops
+    managedNamespaceMetadata: # Comment this line if the namespace is created outside of ArgoCD
+      labels: # Comment this line if the namespace is created outside of ArgoCD
+        app.kubernetes.io/managed-by: openshift-gitops # Comment this line if the namespace is created outside of ArgoCD
+        argocd.argoproj.io/managed-by: openshift-gitops # Comment this line if the namespace is created outside of ArgoCD
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
+      - CreateNamespace=true # Comment this line if the namespace is created outside of ArgoCD
       - RespectIgnoreDifferences=true
   ignoreDifferences:
     - group: "*"
