@@ -1,0 +1,24 @@
+apiVersion: v2
+name: arc-openshift-adapter
+description: >-
+  OpenShift adapter for GitHub Actions Runner Controller (ARC).
+  Deploys SecurityContextConstraints, RBAC, and the upstream ARC Helm charts
+  as sub-chart dependencies to run on OpenShift.
+type: application
+version: 0.2.0
+appVersion: "0.14.2"
+keywords:
+  - github-actions
+  - openshift
+  - actions-runner-controller
+  - arc
+  - self-hosted-runner
+dependencies:
+  - name: gha-runner-scale-set-controller
+    version: "0.14.2" # If deploying with ArgoCD without CRD permissions, ensure this matches the version used to install the CRDs manually (see README.md prerequisite for instructions).
+    repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
+    alias: controller
+  - name: gha-runner-scale-set
+    version: "0.14.2" # If deploying with ArgoCD without CRD permissions, ensure this matches the version used to install the CRDs manually (see README.md prerequisite for instructions).
+    repository: "oci://ghcr.io/actions/actions-runner-controller-charts"
+    alias: runners

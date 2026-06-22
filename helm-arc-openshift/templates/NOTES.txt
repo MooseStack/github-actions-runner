@@ -1,0 +1,63 @@
+ARC (Actions Runner Controller) on OpenShift has been deployed!
+
+This chart deploys Actions Runner Controller (ARC) on OpenShift with autoscaling
+ephemeral runner pods. It includes the upstream ARC Helm charts as sub-chart
+dependencies and adds the OpenShift-specific RBAC and prerequisites.
+
+1. Resources created:
+    1. Secret                          - GitHub App or PAT credentials referenced by the runner scale set
+    2. ConfigMap                       - Annotated with config.openshift.io/inject-trusted-cabundle so OpenShift auto-injects the cluster CA bundle (needed for GHES TLS)
+    3. ServiceAccount                  - Runner pod identity (arc-runner-sa by default)
+    4. RoleBinding -> ClusterRole      - Grants the runner SA usage of the anyuid SCC (ClusterRole system:openshift:scc:anyuid)
+    5. Role/RoleBinding                - Grants the controller SA usage of the nonroot-v2 SCC
+    6. Role/RoleBinding (if enabled)   - Grants ArgoCD application controller permission to manage actions.github.com CRs (argocd.enabled: true)
+    7. gha-runner-scale-set-controller - Sub-chart: ARC controller manager — watches CRs, mounts trusted CA bundle for GHES
+    8. gha-runner-scale-set            - Sub-chart: AutoScalingRunnerSet CR, listener pod, and ephemeral runner pods
+
+2. To install/upgrade the chart with Helm CLI:
+
+```
+   helm dependency build ./helm-arc-openshift
+   helm install arc-ocp ./helm-arc-openshift -n arc-systems -f values.yaml
+```
+
+   Tip: Search for #UPDATE THIS in values.yaml to find all values that must be customized.
+
+3. Key values to configure:
+
+   runners.githubConfigUrl                - GitHub config URL (repository, org, or enterprise) — set on the runner sub-chart, NOT in secrets
+   secrets.github_token                   - If using a PAT
+   secrets.github_app_id                  - If using GitHub App
+   secrets.github_app_installation_id     - If using GitHub App
+   secrets.github_app_private_key         - If using GitHub App
+   runners.maxRunners                     - Max number of runner pods (default: 10)
+   runners.minRunners                     - Min number of runner pods (default: 1)
+   runners.runnerGroup                    - Runner group (must already exist in your GitHub org/enterprise; defaults to "default")
+   runners.runnerScaleSetName             - Becomes the runs-on label in workflows; defaults to Helm release name
+   controller.flags.watchSingleNamespace  - Restrict controller to a single namespace (recommended for security)
+
+4. OpenShift-specific details:
+
+   SecurityContextConstraints  - The runner SA gets the anyuid SCC via a RoleBinding to the built-in ClusterRole.
+                                 The controller SA gets the nonroot-v2 SCC via a namespace-scoped Role/RoleBinding.
+   GHES TLS                   - A ConfigMap annotated with config.openshift.io/inject-trusted-cabundle is created so OpenShift
+                                 injects the cluster CA bundle. This is mounted into both the controller and runner/listener pods.
+                                 The env var GITHUB_ACTIONS_FORCE_GHES=true is set on the controller and listener.
+   Arbitrary UID assignment   - The runner image sets chown -R runner:0 and chmod 775 so GID 0 has write access.
+
+5. Use in workflows:
+
+```yaml
+   jobs:
+     build:
+       runs-on: arc-ocp   # matches the helm release name
+       steps:
+         - uses: actions/checkout@v4
+         - run: echo "Running on OpenShift via ARC!"
+```
+
+6. Cleanup:
+
+```
+   helm uninstall arc-ocp -n arc-systems
+```

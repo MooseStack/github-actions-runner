@@ -1,0 +1,47 @@
+## ---------------------------------------------------------------
+## traditional runner  –  values.yaml
+## ---------------------------------------------------------------
+## TIP: Search this file for "#UPDATE THIS" to find all values
+##      that must be customized for your environment.
+## ---------------------------------------------------------------
+
+name: github-actions-runner-self
+
+replicaCount: 1
+
+image:
+  repository: "your-registry.example.com/your-org/github-self-hosted-runner" #UPDATE THIS
+  tag: "ubi9-traditional-runner-latest" #UPDATE THIS
+  pullPolicy: "Always" # Defaults to IfNotPresent if not set. Key is optional.
+  imagePullSecretName: "" # Optional - set if pulling from a private registry
+
+resources:
+  requests: #min
+    cpu: 500m
+    memory: 700Mi
+    ephemeralstorage: "2Gi"
+  limits: #max
+    cpu: 800m
+    memory: 1Gi
+    ephemeralstorage: "10Gi"
+
+ # Secrets to populate the Kubernetes Secret. Set via helm `--set`, this values file. or argocd/flux, etc.
+secrets:
+  # Optional - if using personal access token authentication:
+  GITHUB_PAT: "" # Personal Access Token
+  # Optional - if using GitHub App authentication:
+  GITHUB_APP_ID: ""
+  GITHUB_APP_INSTALL_ID: ""
+  GITHUB_APP_PEM: ""
+  # Optional - if using registration token authentication (PAT or APP preferred to manage runner lifecycle):
+  GITHUB_RUNNER_TOKEN: ""
+  # GitHub repository/org details:
+  GITHUB_DOMAIN: "" #UPDATE THIS - Leave empty for github.com. Only set for enterprise github
+  GITHUB_OWNER: "your-org" #UPDATE THIS
+  GITHUB_REPOSITORY: "github-self-hosted-runner" #UPDATE THIS
+  # Runner configuration:
+  GITHUB_RUNNER_WORKDIR: "/home/runner/_work"
+  GITHUB_RUNNER_LABEL: "ubi9-gh-runner,openshift" #UPDATE THIS
+  GITHUB_RUNNER_EPHEMERAL: ""
+  # Organization level runner group name. Must already exist. GITHUB_REPOSITORY should not be filled out if using this.
+  GITHUB_ORG_RUNNER_GROUP: "" #UPDATE THIS if using runner groups

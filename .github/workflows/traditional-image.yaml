@@ -1,0 +1,79 @@
+# This is an example of a working image-build-push workflow that can clone a 
+# GitHub repo, build a designated container image via Containerfile, and push
+# it to your designated image repository.
+
+name: Traditional Runner Image Build
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - 'container_image/Containerfile'
+#       - 'container_image/Containerfile.traditional'
+#       - 'container_image/etc-containers-storage.conf'
+#       - 'container_image/entrypoint.sh'
+#       - 'container_image/get_github_app_token.sh'
+#       - 'container_image/register.sh'
+#       - .github/workflows/traditional-image.yaml
+on: workflow_dispatch
+      
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: your-org/github-self-hosted-runner
+      
+jobs:
+  build:
+    name: Traditional Runner Image Build
+    runs-on: [openshift]
+
+    steps:
+    # 1. Checkout repo
+    - uses: actions/checkout@v6
+
+    # Get runner version for image tag on push
+    - name: Get Runner version
+      id: runner-version
+      run: |
+        version=$(grep -oP '^ARG RUNNER_VERSION=\K.*' container_image/Containerfile)-$(date +%s); \
+        echo "runner_version=$version" >> "$GITHUB_OUTPUT"
+
+    # 2. Build base image
+    - name: Build base image
+      id: build-base
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: runner-base
+        tags: latest
+        containerfiles: |
+          ./container_image/Containerfile
+        context: ./container_image
+
+    # 3. Build traditional image from base
+    - name: Build traditional image
+      id: build-image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: ${{ env.IMAGE_NAME }}
+        tags: ubi9-traditional-runner-latest ubi9-traditional-runner-v${{steps.runner-version.outputs.runner_version}}
+        build-args: |
+          BASE_IMAGE=localhost/runner-base:latest
+        containerfiles: |
+          ./container_image/Containerfile.traditional
+        context: ./container_image
+
+    # 4. Push image to registry
+    - name: Push to registry
+      id: push-to-quay
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build-image.outputs.image }}
+        tags: ${{ steps.build-image.outputs.tags }}
+        registry: your-registry.example.com
+        # Set the following repository secrets in Settings > Secrets and Varables > Actions > Secrets > New Repository Secret
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+
+    - name: Print image url
+      run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
