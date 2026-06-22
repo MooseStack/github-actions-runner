@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-actions-runner
+  namespace: openshift-gitops
+spec:
+  project: <ARGOCD_PROJECT_NAME>
+  source:
+    repoURL: https://github.com/your-org/github-self-hosted-runner.git
+    targetRevision: main
+    path: helm-traditional
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: <NAMESPACE_NAME>
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: CHANGE-THIS-TO-NAME-OF-SECRET #Generated using: {{ .Values.name }}-secret
+      jsonPointers:
+          - /data
+          - /stringData
+          

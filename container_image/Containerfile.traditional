@@ -1,0 +1,26 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+COPY --chmod=755 entrypoint.sh get_github_app_token.sh register.sh /entrypoint/
+
+## Do not put sensitive details here, pass them in via environment variables instead
+# If using PAT (personal access token)
+ENV GITHUB_PAT="" \
+# If using GitHub App
+    GITHUB_APP_ID="" \
+    GITHUB_APP_INSTALL_ID="" \
+    GITHUB_APP_PEM="" \
+# GitHub Actions Runner token (not required if using PAT or GitHub App)
+    GITHUB_RUNNER_TOKEN="" \
+# GITHUB_DOMAIN - leave blank if "github.com"
+    GITHUB_DOMAIN="" \
+    GITHUB_OWNER="username" \
+    GITHUB_REPOSITORY="gitrepo" \
+# Runner workload directory
+    GITHUB_RUNNER_WORKDIR="/home/runner/_work" \
+    GITHUB_RUNNER_LABEL="ubi9-gh-runner,openshift" \
+    GITHUB_RUNNER_EPHEMERAL="" \
+# Organization level runner group name. Must already exist. GITHUB_REPOSITORY should not be filled out if using this.
+    GITHUB_ORG_RUNNER_GROUP=""
+
+CMD ["/entrypoint/entrypoint.sh"]

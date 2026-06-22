@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -eE
 
@@ -66,18 +66,33 @@ fi
 
 ephemeral_arg=""
 if [ "${GITHUB_RUNNER_EPHEMERAL:-}" = "True" ] || [ "${GITHUB_RUNNER_EPHEMERAL:-}" = "true" ]; then
+    echo "Registering runner as ephemural"
     ephemeral_arg="--ephemeral"
+fi
+
+if [[ -n "${GITHUB_REPOSITORY:-}" && -n "${GITHUB_ORG_RUNNER_GROUP:-}" ]]; then
+    echo "ERROR: GITHUB_ORG_RUNNER_GROUP cannot be used with GITHUB_REPOSITORY registrations."
+    echo "Keep the value of GITHUB_REPOSITORY empty if you want to register the runner to an Organization level (with GITHUB_ORG_RUNNER_GROUP)."
+    exit 1
+fi
+
+# using array to add quotes when registering, incase if runner has spaces
+runnergroup_arg=()
+if [[ -n "${GITHUB_ORG_RUNNER_GROUP:-}" ]]; then
+    echo "Registering runner with the GITHUB_ORG_RUNNER_GROUP: ${GITHUB_ORG_RUNNER_GROUP}"
+    runnergroup_arg=(--runnergroup "${GITHUB_ORG_RUNNER_GROUP}")
 fi
 
 if [ -n "${GITHUB_RUNNER_TOKEN:-}" ]; then
     set -e
-    /opt/gh-actions-runner/config.sh \
+    /home/runner/config.sh \
         --name ubi9-$(date +%m-%d-%Y.%s) \
         --token ${GITHUB_RUNNER_TOKEN} \
         --url ${registration_url} \
         --work ${GITHUB_RUNNER_WORKDIR} \
         --labels ${GITHUB_RUNNER_LABEL} \
         ${ephemeral_arg} \
+        "${runnergroup_arg[@]}" \
         --unattended \
         --replace
     set +x
@@ -87,7 +102,7 @@ remove() {
     payload=$(curl -sSfLX POST -H "Authorization: token ${GITHUB_PAT}" ${token_url%/registration-token}/remove-token)
     export REMOVE_TOKEN=$(echo $payload | jq .token --raw-output)
 
-    /opt/gh-actions-runner/config.sh remove --unattended --token "${REMOVE_TOKEN}"
+    /home/runner/config.sh remove --unattended --token "${REMOVE_TOKEN}"
 }
 
 remove_github_app() {
@@ -95,5 +110,5 @@ remove_github_app() {
     payload=$(curl -sSfLX POST -H "Authorization: token ${app_token}" ${token_url%/registration-token}/remove-token)
     export REMOVE_TOKEN=$(echo $payload | jq .token --raw-output)
 
-    /opt/gh-actions-runner/config.sh remove --unattended --token "${REMOVE_TOKEN}"
+    /home/runner/config.sh remove --unattended --token "${REMOVE_TOKEN}"
 }

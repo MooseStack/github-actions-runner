@@ -1,0 +1,200 @@
+## ---------------------------------------------------------------
+## arc-openshift-adapter  –  values.yaml
+## ---------------------------------------------------------------
+## TIP: Search this file for "#UPDATE THIS" to find all values
+##      that must be customized for your environment.
+## ---------------------------------------------------------------
+## This chart deploys the upstream ARC Helm charts as sub-chart
+## dependencies and creates the OpenShift-specific resources
+## (SCCs, RBAC, Secret) needed to run them.
+##
+## Prerequisites:
+##    Requires CRD's to be installed manually if deploying with ArgoCD without CRD permissions.
+##     1. Get controller version from dependency chart version: helm-arc-openshift/Chart.yaml
+##     2. Execute:
+##  $ VERSION=0.14.2
+##  $ BASE_URL="https://raw.githubusercontent.com/actions/actions-runner-controller/gha-runner-scale-set-${VERSION}/charts/gha-runner-scale-set-controller/crds"
+##  $ oc apply --server-side -f "${BASE_URL}/actions.github.com_autoscalinglisteners.yaml"
+##  $ oc apply --server-side -f "${BASE_URL}/actions.github.com_autoscalingrunnersets.yaml"
+##  $ oc apply --server-side -f "${BASE_URL}/actions.github.com_ephemeralrunners.yaml"
+##  $ oc apply --server-side -f "${BASE_URL}/actions.github.com_ephemeralrunnersets.yaml"
+##
+## Install:
+##   helm dependency build ./helm-arc-openshift
+##   helm install arc-ocp ./helm-arc-openshift -n arc-systems -f values.yaml
+## ---------------------------------------------------------------
+
+name: arc-runner
+
+## -- Secrets to populate the Kubernetes Secret. Set via values file, argocd, etc.
+## Secret name will be: {{ .Values.name }}-secret
+## Only auth credentials belong here (PAT or GitHub App), not the config URL.
+secrets:
+  ## Optional - if using personal access token authentication:
+  # github_token: ""
+  ## Optional - if using GitHub App authentication:
+  github_app_id: ""
+  github_app_installation_id: ""
+  github_app_private_key: ""
+
+## -- Service account name used by the runner pods
+## Used by rbac-runner.yaml (SA + RoleBinding) and the runner pod template below
+# runnerServiceAccountName: "" #default will create "arc-runner-sa"
+
+## -- Additional labels applied to all resources
+commonLabels: {}
+
+## -- ArgoCD RBAC: grants the ArgoCD application controller
+## permission to manage ARC custom resources in this namespace.
+## Enable this when deploying via ArgoCD.
+argocd:
+  enabled: true #UPDATE THIS if not deploying with ArgoCD
+  ## The ArgoCD application controller service account name
+  serviceAccountName: "openshift-gitops-argocd-application-controller"
+  ## The namespace where ArgoCD is installed
+  namespace: "openshift-gitops"
+
+## ---------------------------------------------------------------
+## Sub-chart: gha-runner-scale-set-controller (alias: controller)
+## Example values file: https://github.com/actions/actions-runner-controller/blob/master/charts/gha-runner-scale-set-controller/values.yaml
+## ---------------------------------------------------------------
+controller:
+  replicaCount: 1
+
+  image:
+    repository: "ghcr.io/actions/gha-runner-scale-set-controller"
+    pullPolicy: IfNotPresent
+
+  serviceAccount:
+    create: true
+    name: "arc-gha-rs-controller"
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  ## Mount the OpenShift-injected CA bundle so the controller trusts GHES
+  env:
+    - name: SSL_CERT_DIR
+      value: "/etc/ssl/certs:/etc/pki/ca-trust/extracted/pem:/etc/pki/tls/certs:/usr/local/share/ca-certificates"
+    ## Setting this env var forces ARC to use the GHES API path: /api/v3/
+    - name: GITHUB_ACTIONS_FORCE_GHES
+      value: "false" # UPDATE THIS to "true" if using GitHub Enterprise Server
+
+  volumes:
+    - name: trusted-ca
+      configMap:
+        name: arc-runner-trusted-ca
+        items:
+          - key: ca-bundle.crt
+            path: ca-bundle.crt
+
+  volumeMounts:
+    - name: trusted-ca
+      mountPath: /usr/local/share/ca-certificates/ca-bundle.crt
+      subPath: ca-bundle.crt
+      readOnly: true
+
+  flags:
+    logLevel: "info"
+    logFormat: "text"
+    ## Restrict the controller to only watch its own namespace
+    watchSingleNamespace: "arc-runners" #UPDATE THIS
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+
+## ---------------------------------------------------------------
+## Sub-chart: gha-runner-scale-set (alias: runners)
+## Example values file: https://github.com/actions/actions-runner-controller/blob/master/charts/gha-runner-scale-set/values.yaml
+## ---------------------------------------------------------------
+runners:
+  ## GitHub repository/org/enterprise URL. Repository is optional if using runner groups since they are org-scoped.
+  githubConfigUrl: "https://github.com/your-org/your-repo" #UPDATE THIS
+
+  ## Reference the secret created by this parent chart - {{ .Values.name }}-secret
+  githubConfigSecret: "arc-runner-secret"
+
+  ## Optional - assign runners to a specific runner group. Defaults to "default" runner group if not set.
+  ## If you set this. Ensure your runners.githubConfigUrl only uses your ORG and not Repo since this is org scoped.
+  runnerGroup: "" #UPDATE THIS if using runner groups
+
+  ## TLS: use the OpenShift-injected cluster CA bundle.
+  ## The ConfigMap "arc-runner-trusted-ca" is auto-populated by OpenShift
+  ## with all cluster-trusted CAs (annotation: config.openshift.io/inject-cabundle).
+  githubServerTLS:
+    certificateFrom:
+      configMapKeyRef:
+        name: arc-runner-trusted-ca
+        key: ca-bundle.crt
+    runnerMountPath: /usr/local/share/ca-certificates/
+
+  ## Runner scale set name (used as runs-on label in workflows).  Default is the Helm Release name.
+  runnerScaleSetName: "" #UPDATE THIS
+
+  ## Scaling
+  maxRunners: 8
+  minRunners: 0
+
+  ## Tell the runner chart where the controller lives
+  controllerServiceAccount:
+    namespace: "" #UPDATE THIS
+    name: "arc-gha-rs-controller"
+
+  ## Listener pod template
+  listenerTemplate:
+    spec:
+      containers:
+        - name: listener
+          env:
+            - name: GITHUB_ACTIONS_FORCE_GHES # If GitHub Enterprise
+              value: "false" # UPDATE THIS to "true" if using GitHub Enterprise Server
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+
+  ## Runner pod template
+  template:
+    spec:
+      serviceAccountName: "arc-runner-sa"
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+        - name: runner
+          image: "your-registry.example.com/your-org/github-self-hosted-runner:ubi9-arc-runner-v2.335.1" #UPDATE THIS
+          imagePullPolicy: IfNotPresent #IfNotPresent or Always
+          command: ["/home/runner/run.sh"]
+          env:
+            - name: ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT
+              value: "true"
+            - name: RUNNER_MANUALLY_TRAP_SIG
+              value: "1"
+          securityContext:
+            allowPrivilegeEscalation: true
+          resources:
+            requests:
+              cpu: 500m
+              memory: 700Mi
+              ephemeral-storage: "2Gi"
+            limits:
+              cpu: "3"
+              memory: 4Gi
+              ephemeral-storage: "10Gi"

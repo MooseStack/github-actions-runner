@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-arc-runner
+  namespace: openshift-gitops
+spec:
+  project: <ARGOCD_PROJECT_NAME>
+  source:
+    repoURL: https://github.com/your-org/github-self-hosted-runner.git
+    targetRevision: main
+    path: helm-arc-openshift
+    helm:
+      skipCrds: true #Required if ArgoCD doesnt have permissions to create CRDs. CRDs must be installed manually before deploying, see the README.md for instructions.
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: <NAMESPACE_NAME>
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    ## Secret is used for the GitHub App or PAT credentials. helm-arc-openshift/templates/secret.yaml
+    - group: ""
+      kind: Secret
+      name: CHANGE-THIS-TO-NAME-OF-SECRET #Generated using: {{ .Values.name }}-secret
+      jsonPointers:
+          - /data
+          - /stringData
+    ## ConfigMap is used to inject trusted CA bundle into the pod. helm-arc-openshift/templates/configmap-tls.yaml
+    - group: ""
+      kind: ConfigMap
+      name: CHANGE-THIS-TO-NAME-OF-CONFIGMAP #Generated using: {{ .Values.name }}-trusted-ca
+      jsonPointers:
+          - /data

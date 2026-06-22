@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.name }}-rolebinding
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.name }}-sa
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ .Values.name }}-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.name }}-build-uid-rolebinding # For running the pod as build user (1000).
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.name }}-sa
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: 'system:openshift:scc:anyuid'
+ # gets created from OpenShift Pipelines Operator; Alternative: can use 'system:openshift:scc:anyuid'. 
+  apiGroup: rbac.authorization.k8s.io

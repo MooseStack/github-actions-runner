@@ -1,10 +1,22 @@
-# Build and push Image
-1. `podman build -t runner ./container_image/`
-2. `podman tag runner:latest docker.io/moosestack/github-actions-runner:latest`
-3. `podman push docker.io/moosestack/github-actions-runner:latest`
+# GitHub Self Hosted Runner
 
-Image uploaded to [Dockerhub](https://hub.docker.com/r/moosestack/github-actions-runner/tags)
+## Repository Structure
 
+```
+├── container_image/                # Runner container images
+│   ├── Containerfile               # Shared base image (UBI9 + runner + tools)
+│   ├── Containerfile.traditional   # Traditional runner layer (entrypoint + registration)
+│   ├── Containerfile.arc           # ARC runner layer (container hooks + run.sh)
+│   ├── entrypoint.sh               # Traditional runner entrypoint
+│   ├── get_github_app_token.sh     # GitHub App JWT token helper
+│   ├── register.sh                 # Runner registration script
+│   └── etc-containers-storage.conf # Podman/Buildah storage config
+├── helm-traditional/               # Helm chart — traditional runner (Deployment)
+├── helm-arc-openshift/             # Helm chart — ARC runner (autoscaling ephemeral)
+└── .github/workflows/              # CI pipelines for image builds
+    ├── traditional-image.yaml
+    └── arc-image.yaml
+```
 
 # Deploy:
 
@@ -14,7 +26,7 @@ You can use a [Personal Access Token(PAT)](https://docs.github.com/en/authentica
 
 ### [Personal Access Token(PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)
 
-If going with a Fine-grained PAT, permissions needed:
+Permissions needed:
 1. `Actions: Read and write`
 2. `Contents: Read-only`
 3. `Metdadata: Read-only`
@@ -22,56 +34,22 @@ If going with a Fine-grained PAT, permissions needed:
 5. `Administration: Read and write` for individual repositories, OR `organization_self_hosted_runners: Read and write` if organization/owner wide runner.
    - This last one is used to generate ephemural Runner Tokens and adds/deletes/updates the Runner in GitHub.
 
+## Option #1 — Traditional Runner (Deployment)
 
-## Option #1 - Deploy with [helm](https://helm.sh/docs/intro/install/) cli
-1. Edit [helm/values.yaml](helm/values.yaml) with your requirements
+A **traditional runner** is a persistent, long-lived self-hosted runner deployed as a standard Kubernetes Deployment. The runner pod registers itself with GitHub on startup, picks up workflow jobs, and stays running between jobs. This approach is straightforward to set up and works well for steady workloads where you want a fixed number of runners always available.
 
-2. To install the chart:
+- **Lifecycle:** Persistent — the runner pod stays running and processes multiple jobs sequentially.
+- **Scaling:** Manual — you control the replica count in the Deployment.
+- **Best for:** Stable workloads, simpler setups, or environments where autoscaling is not needed.
 
-```
-   helm install gh-runner ./helm -n gh-runner \
-   --create-namespace \
-   --values ./helm/values.yaml \
-   --set secrets.GITHUB_PAT='YOUR_GH_PAT'
-```
+See **[helm-traditional/README.md](helm-traditional/README.md)** for image build and deploy instructions.
 
-Other available options:
+## Option #2 — ARC (Actions Runner Controller) on OpenShift
 
-```
-# If using a PAT
-    --set secrets.GITHUB_PAT=""
+**ARC** is the GitHub-supported [Actions Runner Controller](https://github.com/actions/actions-runner-controller), which manages ephemeral runner pods that scale automatically based on workflow demand. A controller watches for queued jobs via the GitHub Actions API and spins up short-lived runner pods on demand. Each pod handles a single job and is destroyed afterward, providing a clean environment every time.
 
-# If using GitHub App
-    --set secrets.GITHUB_APP_ID=""
-    --set secrets.GITHUB_APP_INSTALL_ID=""
-    --set secrets.GITHUB_APP_PEM=""
+- **Lifecycle:** Ephemeral — each runner pod is created for one job and removed after completion.
+- **Scaling:** Automatic — scales from zero to your configured maximum based on queued jobs.
+- **Best for:** Variable or bursty workloads, cost efficiency, and environments that benefit from clean runner state per job.
 
-# GitHub Actions Runner token (not required if using PAT or GitHub App)
-    --set secrets.GITHUB_RUNNER_TOKEN=""
-
-# GITHUB_DOMAIN - leave blank if "github.com"
-    --set secrets.GITHUB_DOMAIN=""
-    --set secrets.GITHUB_OWNER="MooseStack"
-    --set secrets.GITHUB_REPOSITORY="github-actions-runner"
-
-# Runner workload directory
-    --set secrets.GITHUB_RUNNER_WORKDIR="/opt/gh-actions-runner/_work"
-    --set secrets.GITHUB_RUNNER_LABEL="ubi9-gh-runner,openshift"
-    --set secrets.GITHUB_RUNNER_EPHEMERAL="" # options are "true" or empty ""
-```
-
-3. This chart creates:
-    1. Deployment - pods containing the GitHub Runner on a UBI image
-    2. Secret - Runner configurations that get used as Environment variables to Deployment pods
-    3. ServiceAccount and Role/RoleBinding scoped to the release namespace which grant access to Tekton resources (pipelineruns, taskruns, pipelines, tasks) and related core resources (pods, secrets, serviceaccounts, configmaps).
-
-
-
-## Option #2 - Deploy with ArgoCD
-
-1. Modify the namespace, project name, etc(view comments) in: [argocd](argocd) folder
-2. `Kubectl apply -f ./argocd` or `oc apply -f ./argocd`
-3. Manually update the values of the Secret `github-actions-runner-secret` in openshift/kubernetes.
-   - Update credentials, by using one of: PAT, GitHub App, or Runner token(not recommended since the other can make it)
-   - Update: GITHUB_DOMAIN, GITHUB_OWNER, and GITHUB_REPOSITORY with your repo info.
-4. Perform a Deployment restart, to pick up the modified Secret values.
+See **[helm-arc-openshift/README.md](helm-arc-openshift/README.md)** for image build and deploy instructions.

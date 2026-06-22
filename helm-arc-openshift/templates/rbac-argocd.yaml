@@ -1,0 +1,45 @@
+{{/*
+  Role + RoleBinding to grant the ArgoCD application controller
+  permission to manage ARC custom resources (actions.github.com)
+  in the target namespace.
+
+  Sync-wave -1 ensures this RBAC is created before ArgoCD
+  attempts to create the AutoScalingRunnerSet CR.
+*/}}
+{{- if .Values.argocd.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "arc-openshift.fullname" . }}-argocd-arc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "arc-openshift.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+rules:
+  - apiGroups: ["actions.github.com"]
+    resources:
+      - autoscalinglisteners
+      - autoscalingrunnersets
+      - ephemeralrunners
+      - ephemeralrunnersets
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "arc-openshift.fullname" . }}-argocd-arc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "arc-openshift.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "arc-openshift.fullname" . }}-argocd-arc
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.argocd.serviceAccountName }}
+    namespace: {{ .Values.argocd.namespace }}
+{{- end }}
