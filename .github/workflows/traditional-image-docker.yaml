@@ -42,7 +42,7 @@ jobs:
       with:
         context: ./container_image
         file: ./container_image/Containerfile
-        tags: runner-base:latest
+        tags: localhost/runner-base:latest
         load: true
 
     - name: Log in to Docker Hub
@@ -62,7 +62,7 @@ jobs:
           ${{ env.IMAGE_NAME }}:ubi9-traditional-runner-latest
           ${{ env.IMAGE_NAME }}:ubi9-traditional-runner-v${{ steps.runner-version.outputs.runner_version }}
         build-args: |
-          BASE_IMAGE=runner-base:latest
+          BASE_IMAGE=localhost/runner-base:latest
         push: true
 
     - name: Print image url
