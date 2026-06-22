@@ -1,22 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Chart.Name }}
+  name: {{ .Values.name }}
+  labels:
+    app.kubernetes.io/part-of: "GitHubSelfHostedRunner"
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}
+      app: {{ .Values.name }}
   template:
     metadata:
       labels:
-        app: {{ .Chart.Name }}
+        app: {{ .Values.name }}
+        app.kubernetes.io/part-of: "GitHubSelfHostedRunner"
     spec:
-      serviceAccountName: {{ .Chart.Name }}-sa
+      serviceAccountName: {{ .Values.name }}-sa
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ .Values.name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          securityContext:
+            allowPrivilegeEscalation: true
           resources:
             requests:
               cpu: {{ .Values.resources.requests.cpu | default "500m" }}
@@ -26,12 +31,13 @@ spec:
               cpu: {{ .Values.resources.limits.cpu | default "800m" }}
               memory: {{ .Values.resources.limits.memory | default "1Gi" }}
               ephemeral-storage: {{ .Values.resources.limits.ephemeralstorage | default "10Gi" }}
-
           envFrom:
             # Attach all key-value pairs from the Secret as environment variables
             - secretRef:
-                name: {{ .Chart.Name }}-secret
-
+                name: {{ .Values.name }}-secret
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
       {{- if .Values.image.imagePullSecretName }}
       imagePullSecrets:
         - name: {{ .Values.image.imagePullSecretName }}

@@ -1,6 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 set -eE
+
+export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 CREDS_FILE="${PWD}/.credentials"
 
@@ -28,7 +30,7 @@ else
 fi
 
 set -x
-/opt/gh-actions-runner/run.sh &
+/home/runner/run.sh &
 svc_pid=$!
 
 wait $svc_pid

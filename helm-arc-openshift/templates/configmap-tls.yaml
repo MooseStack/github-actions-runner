@@ -1,0 +1,15 @@
+{{/*
+  OpenShift auto-injects the cluster-wide trusted CA bundle into any
+  ConfigMap annotated with "config.openshift.io/inject-cabundle: true".
+  The injected key is "ca-bundle.crt".
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-trusted-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "arc-openshift.labels" . | nindent 4 }}
+    config.openshift.io/inject-trusted-cabundle: 'true'
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true

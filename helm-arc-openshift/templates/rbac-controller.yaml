@@ -1,0 +1,35 @@
+{{/*
+  Role + RoleBinding to grant the nonroot-v2 SCC
+  to the ARC controller's ServiceAccount.
+  Uses namespace-scoped resources so ArgoCD projects with
+  namespace-only permissions can deploy this chart.
+*/}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "arc-openshift.fullname" . }}-controller-scc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "arc-openshift.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["security.openshift.io"]
+    resources: ["securitycontextconstraints"]
+    resourceNames:
+      - nonroot-v2
+    verbs: ["use"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "arc-openshift.fullname" . }}-controller-scc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "arc-openshift.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "arc-openshift.fullname" . }}-controller-scc
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "arc-openshift.controllerServiceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
